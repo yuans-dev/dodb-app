@@ -32,11 +32,12 @@
 		el.select();
 	}
 	function handleEnter(e) {
-		if (e.key === 'Enter') {
+		if (e.code === 'Enter') {
 			e.target.blur();
 		}
 	}
 	function validate() {
+		value = value.replace(/ /g, '_');
 		let suffix = 0;
 		let name = value;
 		for (let i = 0; i < columns.length; i++) {

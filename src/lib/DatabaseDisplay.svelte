@@ -37,14 +37,16 @@
 		<div class="table">
 			<div class="columns">
 				{#each table.metadata.columns as column, i}
-					<Column
-						columns={table.metadata.columns}
-						index={i}
-						on:requestDelete={handleDelete}
-						on:change={handleChange}
-						on:error={handleError}
-						bind:value={column}
-					></Column>
+					<div class="column">
+						<Column
+							columns={table.metadata.columns}
+							index={i}
+							on:requestDelete={handleDelete}
+							on:change={handleChange}
+							on:error={handleError}
+							bind:value={column}
+						></Column>
+					</div>
 				{/each}
 				<button
 					on:click={() => {
@@ -52,6 +54,13 @@
 					}}>+</button
 				>
 			</div>
+			{#each table.items as item, i}
+				<div class="item">
+					{#each table.metadata.columns as column, i}
+						<span class="attribute">{item[column]}</span>
+					{/each}
+				</div>
+			{/each}
 		</div>
 	{/if}
 </div>
@@ -68,7 +77,8 @@
 		font-family: monospace;
 	}
 	.columns {
-		display: flex;
+		display: table-row;
+		height: fit-content;
 		gap: 0.5rem;
 	}
 	.columns button {
@@ -81,5 +91,21 @@
 		background-color: var(--accent);
 		color: var(--text);
 		font-weight: bold;
+	}
+	.column {
+		display: table-cell;
+		padding: 1rem;
+		width: fit-content;
+	}
+	.table {
+		display: table;
+		flex-direction: column;
+	}
+	.item {
+		display: table-row;
+		height: fit-content;
+	}
+	.attribute {
+		display: table-cell;
 	}
 </style>
