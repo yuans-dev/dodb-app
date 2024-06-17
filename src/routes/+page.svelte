@@ -1,14 +1,29 @@
 <script>
+	import DatabaseDisplay from '../lib/DatabaseDisplay.svelte';
 	import MessageField from '../lib/MessageField.svelte';
 	import QueryField from '../lib/QueryField.svelte';
+	import '@fortawesome/fontawesome-free/css/all.min.css';
 
-	let responses;
+	let responses = [];
 	let currentDatabase = null;
+	function handleResponse(event) {
+		responses = [...responses, event.detail];
+	}
+	function clearResponses() {
+		responses = [];
+	}
 </script>
 
 <div class="app-proper">
-	<QueryField bind:responses bind:currentDatabase></QueryField>
-	<MessageField {responses}></MessageField>
+	<div class="display-section">
+		<DatabaseDisplay bind:currentDatabase on:response={handleResponse}></DatabaseDisplay>
+	</div>
+
+	<div class="query-section">
+		<MessageField {responses}></MessageField>
+		<QueryField on:clearRequest={clearResponses} on:response={handleResponse} bind:currentDatabase
+		></QueryField>
+	</div>
 </div>
 
 <style>
@@ -16,7 +31,18 @@
 	.app-proper {
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
+		justify-content: space-evenly;
 		width: 100%;
+		height: 100%;
+		padding: 1rem;
+	}
+	.app-proper > * {
+		display: flex;
+		flex-direction: column;
+		height: 50%;
+	}
+	.query-section {
+		align-items: flex-start;
+		justify-content: flex-end;
 	}
 </style>

@@ -16,4 +16,7 @@
 	.error {
 		color: red;
 	}
+	span {
+		font-family: monospace;
+	}
 </style>
