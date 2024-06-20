@@ -1,28 +1,18 @@
 <script>
 	export let value = '';
-	export let index = 0;
-	export let columns = [];
 	import { createEventDispatcher } from 'svelte';
-	import { QueryResult } from './queryResult';
+	import {handleQuery} from './query';
 
 	const dispatch = createEventDispatcher();
 	let editable = false;
 	let input;
 	let inputValue;
-	$: value && validate();
-	function toggleEditable() {
+
+	async function toggleEditable() {
 		editable = !editable;
 		if (!editable) {
-			if (inputValue) {
-				value = inputValue;
-			} else {
-				dispatch('error', {
-					queryType: 'rename column',
-					type: 'error',
-					message: 'Column name cannot be empty.',
-					value: null
-				});
-			}
+			let newResponse = await handleQuery(`rename column (${value}) to (${inputValue})`);
+			dispatch('response',newResponse);
 		} else {
 			inputValue = value;
 		}
@@ -36,20 +26,9 @@
 			e.target.blur();
 		}
 	}
-	function validate() {
-		value = value.replace(/ /g, '_');
-		let suffix = 0;
-		let name = value;
-		for (let i = 0; i < columns.length; i++) {
-			if (value === columns[i] && i != index) {
-				suffix++;
-				value = `${name}_${suffix}`;
-			}
-		}
-		dispatch('change');
-	}
+
 	function requestDelete() {
-		dispatch('requestDelete', { index });
+		dispatch('requestDelete', { value });
 	}
 </script>
 

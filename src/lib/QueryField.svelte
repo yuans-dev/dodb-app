@@ -1,9 +1,9 @@
 <script>
 	export let value = '';
 
-	export let currentDatabase;
-	import { handleQuery } from './handleQuery';
+	import { handleQuery } from './query';
 	import { createEventDispatcher } from 'svelte';
+	import { table, database } from './store';
 
 	const dispatch = createEventDispatcher();
 	async function handleEnter(sender) {
@@ -13,20 +13,21 @@
 		}
 	}
 	async function submit() {
-		let query = value.split(' ');
+		let query = value;
 
-		if (query[0] === 'clear') {
+		if (query.split(' ')[0] === 'clear') {
 			dispatch('clearRequest');
 
 			return;
 		}
 
-		let newResponse = await handleQuery(query, currentDatabase);
+		let newResponse = await handleQuery(query);
+
 		if (
 			(newResponse.queryType === 'create db' || newResponse.queryType === 'open') &&
 			newResponse.type === 'success'
 		) {
-			currentDatabase = newResponse.value;
+			database.set(newResponse.value);
 		}
 		dispatch('response', newResponse);
 	}
@@ -34,7 +35,7 @@
 
 <div class="query-field">
 	<div class="database-indicator">
-		{currentDatabase ? `>> ${currentDatabase}` : 'No database opened'}
+		{$database ? `>> ${$database}` : 'No database opened'}
 	</div>
 	<input type="text" bind:value on:keypress={handleEnter} />
 </div>

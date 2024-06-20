@@ -5,7 +5,6 @@
 	import '@fortawesome/fontawesome-free/css/all.min.css';
 
 	let responses = [];
-	let currentDatabase = null;
 	function handleResponse(event) {
 		responses = [...responses, event.detail];
 	}
@@ -16,12 +15,12 @@
 
 <div class="app-proper">
 	<div class="display-section">
-		<DatabaseDisplay bind:currentDatabase on:response={handleResponse}></DatabaseDisplay>
+		<DatabaseDisplay on:response={handleResponse}></DatabaseDisplay>
 	</div>
 
 	<div class="query-section">
 		<MessageField {responses}></MessageField>
-		<QueryField on:clearRequest={clearResponses} on:response={handleResponse} bind:currentDatabase
+		<QueryField on:clearRequest={clearResponses} on:response={handleResponse}
 		></QueryField>
 	</div>
 </div>
@@ -44,5 +43,6 @@
 	.query-section {
 		align-items: flex-start;
 		justify-content: flex-end;
+		overflow: hidden;
 	}
 </style>

@@ -1,3 +1,4 @@
 import { writable } from 'svelte/store';
 
-export const currentlyEditing = writable(null);
+export const table = writable(null);
+export const database = writable(null);

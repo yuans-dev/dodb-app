@@ -1,62 +1,54 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import { currentlyEditing } from './store';
+	import { table, database } from './store';
 	import Column from './Column.svelte';
 	import { createEventDispatcher } from 'svelte';
-	import { save } from './handleQuery';
+	import { handleQuery, save } from './query';
 	const dispatch = createEventDispatcher();
 
-	export let currentDatabase = null;
-	let table;
-	const unsubscribe = currentlyEditing.subscribe((value) => {
-		table = value;
-	});
-	onDestroy(unsubscribe);
-
-	function addColumn(name) {
-		table.metadata.columns = [...table.metadata.columns, name];
-		handleChange();
+	async function addColumn() {
+		let newResponse = await handleQuery('insert column (new)');
+		dispatch('response', newResponse);
 	}
 	function handleError(event) {
 		dispatch('response', event.detail);
 	}
-	function handleChange() {
-		currentlyEditing.set(table);
-		save(currentDatabase, $currentlyEditing);
+
+	async function handleDelete(event) {
+		
+		let newResponse = await handleQuery(`remove column (${event.detail.value})`);;
+		dispatch('response', newResponse);
 	}
-	function handleDelete(event) {
-		let index = event.detail.index;
-		table.metadata.columns = table.metadata.columns.toSpliced(index, 1);
-		handleChange();
+	function handleResponse(event){
+		console.log(event);
+		dispatch('response', event.detail);
 	}
 </script>
 
 <div class="table-display">
-	{#if table}
-		<span>{table ? table.metadata.name : 'Display'}</span>
+	{#if $table}
+		<span>{$table ? $table.metadata.name : 'Display'}</span>
 		<div class="table">
 			<div class="columns">
-				{#each table.metadata.columns as column, i}
+				{#each $table.metadata.columns as column, i}
 					<div class="column">
 						<Column
-							columns={table.metadata.columns}
-							index={i}
 							on:requestDelete={handleDelete}
-							on:change={handleChange}
 							on:error={handleError}
 							bind:value={column}
+							on:response={handleResponse}
 						></Column>
 					</div>
 				{/each}
 				<button
 					on:click={() => {
-						addColumn('new column');
+						addColumn();
 					}}>+</button
 				>
 			</div>
-			{#each table.items as item, i}
+			{#each $table.items as item, i}
 				<div class="item">
-					{#each table.metadata.columns as column, i}
+					{#each $table.metadata.columns as column, i}
 						<span class="attribute">{item[column]}</span>
 					{/each}
 				</div>
