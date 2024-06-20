@@ -6,19 +6,23 @@ const baseDir = 'DoDB Databases';
 
 export async function save() {
 	let d, t;
-	database.subscribe(value => {
+	database.subscribe((value) => {
 		d = value;
 	});
-	table.subscribe(value => {
+	table.subscribe((value) => {
 		t = value;
 	});
 	if (!d || !t) {
 		return;
 	}
-	const check = await exists(`${baseDir}\\${d}\\${t.metadata.name}.json`, { dir: BaseDirectory.Document });
+	const check = await exists(`${baseDir}\\${d}\\${t.metadata.name}.json`, {
+		dir: BaseDirectory.Document
+	});
 	if (check.valueOf()) {
 		const jsonString = JSON.stringify(t);
-		await writeTextFile(`${baseDir}\\${d}\\${t.metadata.name}.json`, jsonString, { dir: BaseDirectory.Document });
+		await writeTextFile(`${baseDir}\\${d}\\${t.metadata.name}.json`, jsonString, {
+			dir: BaseDirectory.Document
+		});
 	} else {
 		return {
 			type: 'error',
@@ -29,10 +33,10 @@ export async function save() {
 
 export async function handleQuery(query) {
 	let t, d;
-	database.subscribe(value => {
+	database.subscribe((value) => {
 		d = value;
 	});
-	table.subscribe(value => {
+	table.subscribe((value) => {
 		t = value;
 	});
 	query = query.split(' ');
@@ -85,19 +89,19 @@ export async function handleQuery(query) {
 			value = removeResult.value;
 			break;
 		case 'assign':
-        	const assignResult = await handleAssign(query.slice(1), t);
-        	queryType = assignResult.queryType;
-        	message = assignResult.message;
-        	type = assignResult.type;
-        	value = assignResult.value;
-        break;
+			const assignResult = await handleAssign(query.slice(1), t);
+			queryType = assignResult.queryType;
+			message = assignResult.message;
+			type = assignResult.type;
+			value = assignResult.value;
+			break;
 		case 'rename':
-        	const renameResult = await handleRename(query.slice(1), d, t);
-        	queryType = renameResult.queryType;
-        	message = renameResult.message;
-        	type = renameResult.type;
-        	value = renameResult.value;
-        break;
+			const renameResult = await handleRename(query.slice(1), d, t);
+			queryType = renameResult.queryType;
+			message = renameResult.message;
+			type = renameResult.type;
+			value = renameResult.value;
+			break;
 	}
 
 	const saveQueryTypes = ['insert', 'remove', 'assign'];
@@ -109,48 +113,44 @@ export async function handleQuery(query) {
 	return new QueryResult(queryType, type, message, value);
 }
 async function handleAssign(queryParts, t) {
-    let queryType = 'assign';
-    let message = 'Invalid query.';
-    let type = 'error';
-    let value = '';
+	let queryType = 'assign';
+	let message = 'Invalid query.';
+	let type = 'error';
+	let value = '';
 
-    // Extract the value and the condition
-	
+	// Extract the value and the condition
 
-    const valueMatch = queryParts.join(' ').match(/value \(([^)]+)\) to \(([^)]+)\) of item/);
-    if (!valueMatch) return { queryType, message, type, value };
+	const valueMatch = queryParts.join(' ').match(/value \(([^)]+)\) to \(([^)]+)\) of item/);
+	if (!valueMatch) return { queryType, message, type, value };
 
-    const newValue = valueMatch[1].trim();
-	const property = valueMatch[2]
+	const newValue = valueMatch[1].trim();
+	const property = valueMatch[2];
 	const conditionStr = queryParts.slice(6).join(' ');
 
-	
+	// Parse the conditions
+	const conditions = parseConditions(`${conditionStr}`);
 
-    // Parse the conditions
-    const conditions = parseConditions(`${conditionStr}`);
-	
-    if (!conditions.length) return { queryType, message, type, value };
+	if (!conditions.length) return { queryType, message, type, value };
 
-    // Find and update the items matching the conditions
-    let itemFound = false;
-    t.items.forEach(item => {
-        if (evaluateConditions(item, conditions)) {
-            item[property] = newValue;  // Assuming the attribute to be updated is 'value'
-            itemFound = true;
-        }
-    });
+	// Find and update the items matching the conditions
+	let itemFound = false;
+	t.items.forEach((item) => {
+		if (evaluateConditions(item, conditions)) {
+			item[property] = newValue; // Assuming the attribute to be updated is 'value'
+			itemFound = true;
+		}
+	});
 
-    if (itemFound) {
-        table.set(t);
-        message = 'Assigned value to item(s).';
-        type = 'success';
-    } else {
-        message = 'No items matched the criteria.';
-    }
+	if (itemFound) {
+		table.set(t);
+		message = 'Assigned value to item(s).';
+		type = 'success';
+	} else {
+		message = 'No items matched the criteria.';
+	}
 
-    return { queryType, message, type, value: newValue };
+	return { queryType, message, type, value: newValue };
 }
-
 
 async function handleCreate(queryParts, d) {
 	let queryType = 'create';
@@ -227,38 +227,43 @@ function handleExit(queryParts, d) {
 
 	return { queryType, message, type, value };
 }
-async function handleRename(queryParts, d, t){
+async function handleRename(queryParts, d, t) {
 	let queryType = 'rename';
 	let message = 'Invalid query.';
 	let type = 'error';
 	let value = '';
 
-	if(!d){
+	if (!d) {
 		message = 'No database opened.';
-	}else if(queryParts[1]){
+	} else if (queryParts[1]) {
 		const valueMatch = queryParts.join(' ').match(/\(([^)]+)\) to \(([^)]+)\)/);
 		if (!valueMatch) return { queryType, message, type, value };
-	
+
 		const oldProp = valueMatch[1].trim();
 		const base = valueMatch[2].trim().replace(/ /g, '_');
+		if (oldProp === base) {
+			type = 'success';
+			message = 'No changes made.';
+			return { queryType, message, type, value };
+		}
 		let newProp = base;
 		let increment = 1;
-		
-		while(t.metadata.columns.includes(newProp)){
+
+		while (t.metadata.columns.includes(newProp)) {
 			newProp = `${base}_${increment}`;
 			increment++;
 		}
-		let index =t.metadata.columns.indexOf(oldProp);
-		if(index === -1){
+		let index = t.metadata.columns.indexOf(oldProp);
+		if (index === -1) {
 			message = `Column "${oldProp}" does not exist.`;
-			return {queryType, message, type, value}
+			return { queryType, message, type, value };
 		}
 		t.metadata.columns[index] = newProp;
 		table.set(t);
-		type='success';
+		type = 'success';
 		message = `Renamed column "${oldProp}" to "${newProp}."`;
 	}
-	return {queryType, type, message, value};
+	return { queryType, type, message, value };
 }
 async function handleEdit(queryParts, d, t) {
 	let queryType = 'edit';
@@ -291,7 +296,6 @@ async function handleInsert(queryParts, t) {
 
 	switch (queryParts[0].toLowerCase()) {
 		case 'item':
-
 			for (let i = 2; i < queryParts.length; i++) {
 				queryParts[1] += queryParts[i];
 			}
@@ -319,11 +323,11 @@ async function handleInsert(queryParts, t) {
 			const valueMatch = queryParts.join(' ').match(/column \(([^)]+)\)/);
 			if (!valueMatch) return { queryType, message, type, value };
 
-			const base = valueMatch[1].trim().replace(/ /g,'_');
+			const base = valueMatch[1].trim().replace(/ /g, '_');
 			if (base) {
 				let columnName = base;
 				let increment = 1;
-				while(t.metadata.columns.includes(columnName)){
+				while (t.metadata.columns.includes(columnName)) {
 					columnName = `${base}_${increment}`;
 					increment++;
 				}
@@ -345,13 +349,12 @@ async function handleRemove(queryParts, t) {
 
 	switch (queryParts[0]?.toLowerCase()) {
 		case 'item':
-			
 			const conditions = parseConditions(queryParts.slice(1).join(' '));
-			
+
 			if (!conditions.length) break;
 
 			const initialLength = t.items.length;
-			t.items = t.items.filter(item => !evaluateConditions(item, conditions));
+			t.items = t.items.filter((item) => !evaluateConditions(item, conditions));
 
 			if (t.items.length === initialLength) {
 				message = 'No items matched the criteria.';
@@ -364,9 +367,9 @@ async function handleRemove(queryParts, t) {
 		case 'column':
 			const valueMatch = queryParts.join(' ').match(/column \(([^)]+)\)/);
 			if (!valueMatch) return { queryType, message, type, value };
-			
+
 			const column = valueMatch[1].trim();
-	
+
 			if (!column || column === t.metadata.primaryKey) {
 				message = `"${column}" is a primary key.`;
 				break;
@@ -375,7 +378,7 @@ async function handleRemove(queryParts, t) {
 			const columnIndex = t.metadata.columns.indexOf(column);
 			if (columnIndex !== -1) {
 				t.metadata.columns.splice(columnIndex, 1);
-				t.items.forEach(item => delete item[column]);
+				t.items.forEach((item) => delete item[column]);
 				table.set(t);
 				message = `Removed column "${column}."`;
 				type = 'success';
@@ -389,25 +392,30 @@ async function handleRemove(queryParts, t) {
 }
 
 function parseInsertValue(insert) {
-	insert = insert.substring(1, insert.length - 1).split(',').map(s => s.trim());
+	insert = insert
+		.substring(1, insert.length - 1)
+		.split(',')
+		.map((s) => s.trim());
 	return insert;
 }
 
 function parseConditions(conditionsStr) {
-	const conditions = conditionsStr.split(/(?<=\))\s*(AND|OR)\s*(?=\()/i).map(cond => cond.trim());
+	const conditions = conditionsStr.split(/(?<=\))\s*(AND|OR)\s*(?=\()/i).map((cond) => cond.trim());
 	if (conditions.length % 2 === 0) return null; // Invalid conditions
 
-	
 	const parsedConditions = [];
 	for (let i = 0; i < conditions.length; i++) {
 		if (i % 2 === 0) {
-			const [property, value] = conditions[i].slice(1, -1).split('=').map(s => s.trim());
+			const [property, value] = conditions[i]
+				.slice(1, -1)
+				.split('=')
+				.map((s) => s.trim());
 			parsedConditions.push({ property, value });
 		} else {
 			parsedConditions.push(conditions[i].toUpperCase());
 		}
 	}
-	
+
 	return parsedConditions;
 }
 
@@ -418,18 +426,15 @@ function evaluateConditions(item, conditions) {
 	for (let i = 0; i < conditions.length; i++) {
 		if (typeof conditions[i] === 'string') {
 			currentLogic = conditions[i];
-			
 		} else {
 			const { property, value } = conditions[i];
 			const conditionResult = item[property] === value;
 			if (currentLogic === 'AND') {
 				result = result && conditionResult;
-
 			} else if (currentLogic === 'OR') {
 				result = result || conditionResult;
 			}
 		}
-		
 	}
 
 	return result;
@@ -446,13 +451,17 @@ async function createDatabase(name) {
 }
 
 async function createTable(database, name) {
-	const check = await exists(`${baseDir}\\${database}\\${name}.json`, { dir: BaseDirectory.Document });
+	const check = await exists(`${baseDir}\\${database}\\${name}.json`, {
+		dir: BaseDirectory.Document
+	});
 	if (check.valueOf()) {
 		return { type: 'error', message: `Table "${name}" already exists in database "${database}."` };
 	} else {
 		const template = { metadata: { name, columns: ['id'], primaryKey: 'id' }, items: [] };
 		const jsonString = JSON.stringify(template);
-		await writeTextFile(`${baseDir}\\${database}\\${name}.json`, jsonString, { dir: BaseDirectory.Document });
+		await writeTextFile(`${baseDir}\\${database}\\${name}.json`, jsonString, {
+			dir: BaseDirectory.Document
+		});
 		return { type: 'success', message: `Created table "${name}" in database "${database}."` };
 	}
 }
@@ -462,9 +471,13 @@ async function databaseExists(name) {
 }
 
 async function tableExists(database, name) {
-	return (await exists(`${baseDir}\\${database}\\${name}.json`, { dir: BaseDirectory.Document })).valueOf();
+	return (
+		await exists(`${baseDir}\\${database}\\${name}.json`, { dir: BaseDirectory.Document })
+	).valueOf();
 }
 
 async function fetchTable(database, name) {
-	return await readTextFile(`${baseDir}\\${database}\\${name}.json`, { dir: BaseDirectory.Document });
+	return await readTextFile(`${baseDir}\\${database}\\${name}.json`, {
+		dir: BaseDirectory.Document
+	});
 }

@@ -49,7 +49,10 @@
 			{#each $table.items as item, i}
 				<div class="item">
 					{#each $table.metadata.columns as column, i}
+					<div class="attribute-container">
 						<span class="attribute">{item[column]}</span>
+					</div>
+						
 					{/each}
 				</div>
 			{/each}
@@ -58,15 +61,13 @@
 </div>
 
 <style>
-	div {
-		display: flex;
-		height: 100%;
-	}
+
 	.table-display {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
 		font-family: monospace;
+		height: 100%;
 	}
 	.columns {
 		display: table-row;
@@ -88,6 +89,9 @@
 		display: table-cell;
 		padding: 1rem;
 		width: fit-content;
+		height: fit-content;
+		
+		
 	}
 	.table {
 		display: table;
@@ -97,7 +101,17 @@
 		display: table-row;
 		height: fit-content;
 	}
-	.attribute {
+	.attribute-container {
 		display: table-cell;
+		padding: 0.2rem 1rem;
+		
+		
+	}
+	.attribute{
+		display: flex;
+		padding: 0.2rem 2rem;
+		font-size: 1rem;
+		border-radius: 0.2rem;
+		background-color: #212021;
 	}
 </style>

@@ -6,7 +6,7 @@
 
 	let responses = [];
 	function handleResponse(event) {
-		responses = [...responses, event.detail];
+		responses = [event.detail, ...responses];
 	}
 	function clearResponses() {
 		responses = [];
@@ -44,5 +44,6 @@
 		align-items: flex-start;
 		justify-content: flex-end;
 		overflow: hidden;
+		gap: 1rem;
 	}
 </style>
