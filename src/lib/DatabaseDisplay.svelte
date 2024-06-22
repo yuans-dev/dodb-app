@@ -4,6 +4,7 @@
 	import Column from './Column.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { handleQuery, save } from './query';
+	import ContentEditable from './ContentEditable.svelte';
 	const dispatch = createEventDispatcher();
 
 	async function addColumn() {
@@ -13,14 +14,17 @@
 	function handleError(event) {
 		dispatch('response', event.detail);
 	}
-
-	async function handleDelete(event) {
-		
-		let newResponse = await handleQuery(`remove column (${event.detail.value})`);;
+	async function handleAttributeChange(event, item, property) {
+		let newResponse = await handleQuery(
+			`assign value (${event.detail.new}) to (${property}) of item (${$table.metadata.primaryKey}=${item[$table.metadata.primaryKey]})`
+		);
 		dispatch('response', newResponse);
 	}
-	function handleResponse(event){
-		console.log(event);
+	async function handleDelete(event) {
+		let newResponse = await handleQuery(`remove column (${event.detail.value})`);
+		dispatch('response', newResponse);
+	}
+	function handleResponse(event) {
 		dispatch('response', event.detail);
 	}
 </script>
@@ -35,7 +39,7 @@
 						<Column
 							on:requestDelete={handleDelete}
 							on:error={handleError}
-							bind:value={column}
+							value={column}
 							on:response={handleResponse}
 						></Column>
 					</div>
@@ -46,28 +50,36 @@
 					}}>+</button
 				>
 			</div>
-			{#each $table.items as item, i}
-				<div class="item">
-					{#each $table.metadata.columns as column, i}
-					<div class="attribute-container">
-						<span class="attribute">{item[column]}</span>
+			{#key $table.metadata.columns}
+				{#each $table.items as item, i}
+					<div class="item">
+						{#each $table.metadata.columns as column, i}
+							<div class="attribute-container">
+								<div class="attribute">
+									<ContentEditable
+										on:change={(event) => {
+											handleAttributeChange(event, item, column);
+										}}
+										bind:value={item[column]}
+									></ContentEditable>
+								</div>
+							</div>
+						{/each}
 					</div>
-						
-					{/each}
-				</div>
-			{/each}
+				{/each}
+			{/key}
 		</div>
 	{/if}
 </div>
 
 <style>
-
 	.table-display {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
 		font-family: monospace;
 		height: 100%;
+		overflow: auto;
 	}
 	.columns {
 		display: table-row;
@@ -90,11 +102,10 @@
 		padding: 1rem;
 		width: fit-content;
 		height: fit-content;
-		
-		
 	}
 	.table {
 		display: table;
+		width: fit-content;
 		flex-direction: column;
 	}
 	.item {
@@ -104,12 +115,13 @@
 	.attribute-container {
 		display: table-cell;
 		padding: 0.2rem 1rem;
-		
-		
 	}
-	.attribute{
+	.attribute {
+		width: 100%;
 		display: flex;
-		padding: 0.2rem 2rem;
+		padding: 0.2rem 1.4rem;
+		align-items: center;
+		justify-content: center;
 		font-size: 1rem;
 		border-radius: 0.2rem;
 		background-color: #212021;

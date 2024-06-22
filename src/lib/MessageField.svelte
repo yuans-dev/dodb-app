@@ -4,10 +4,11 @@
 
 <div class="message-field">
 	{#each responses as response}
-	<div class="response">
-		<span class="{response.type}">> {response.type === "success"? "OK" : "ERROR"}</span><span class={response.type}>{response.message}</span>
-	</div>
-		
+		<div class="response">
+			<span class={response.type}>> {response.type === 'success' ? 'OK' : 'ERROR'}</span><span
+				class={response.type}>{response.message}</span
+			>
+		</div>
 	{/each}
 </div>
 
@@ -18,23 +19,23 @@
 		font-size: 1rem;
 		overflow: auto;
 		width: 100%;
+		height: 100%;
 		background-color: rgb(12, 12, 12);
 		padding: 0.5rem 0.2rem;
 		border: 2px inset #888;
 		border-radius: 0.4rem 0 0 0.4rem;
 	}
-	.message-field::-webkit-scrollbar{
+	.message-field::-webkit-scrollbar {
 		max-width: 0px;
 		transition: all 0.3s ease;
 	}
-	.message-field:hover::-webkit-scrollbar{
+	.message-field:hover::-webkit-scrollbar {
 		max-width: 5px;
 	}
-	.response{
+	.response {
 		display: flex;
-
 	}
-	.response > span:first-child{
+	.response > span:first-child {
 		padding-right: 1rem;
 		width: 90px;
 	}
@@ -44,8 +45,8 @@
 	span {
 		font-family: monospace;
 	}
-	span::selection{
+	span::selection {
 		background-color: var(--text);
-		color:var(--accent);
+		color: var(--accent);
 	}
 </style>

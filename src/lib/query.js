@@ -5,6 +5,7 @@ import { table, database } from './store';
 const baseDir = 'DoDB Databases';
 
 export async function save() {
+	console.time('save');
 	let d, t;
 	database.subscribe((value) => {
 		d = value;
@@ -12,6 +13,7 @@ export async function save() {
 	table.subscribe((value) => {
 		t = value;
 	});
+	removeUnusedColumns(t);
 	if (!d || !t) {
 		return;
 	}
@@ -23,6 +25,7 @@ export async function save() {
 		await writeTextFile(`${baseDir}\\${d}\\${t.metadata.name}.json`, jsonString, {
 			dir: BaseDirectory.Document
 		});
+		console.timeEnd('save');
 	} else {
 		return {
 			type: 'error',
@@ -104,7 +107,7 @@ export async function handleQuery(query) {
 			break;
 	}
 
-	const saveQueryTypes = ['insert', 'remove', 'assign'];
+	const saveQueryTypes = ['insert', 'remove', 'assign', 'rename'];
 	const shouldSave = saveQueryTypes.includes(queryType) && type === 'success';
 	if (shouldSave) {
 		await save();
@@ -112,34 +115,48 @@ export async function handleQuery(query) {
 
 	return new QueryResult(queryType, type, message, value);
 }
+export async function removeUnusedColumns(table) {
+	const columnsSet = new Set(table.metadata.columns);
+
+	for (const item of table.items) {
+		for (const key in item) {
+			if (!columnsSet.has(key)) {
+				delete item[key];
+			}
+		}
+	}
+}
 async function handleAssign(queryParts, t) {
-	let queryType = 'assign';
+	const queryType = 'assign';
 	let message = 'Invalid query.';
 	let type = 'error';
 	let value = '';
 
-	// Extract the value and the condition
-
+	// Match the value and property from the query
 	const valueMatch = queryParts.join(' ').match(/value \(([^)]+)\) to \(([^)]+)\) of item/);
 	if (!valueMatch) return { queryType, message, type, value };
 
 	const newValue = valueMatch[1].trim();
-	const property = valueMatch[2];
+	const property = valueMatch[2].trim();
 	const conditionStr = queryParts.slice(6).join(' ');
 
-	// Parse the conditions
-	const conditions = parseConditions(`${conditionStr}`);
+	// Parse conditions from the query
+	const conditions = parseConditions(conditionStr);
 
 	if (!conditions.length) return { queryType, message, type, value };
 
-	// Find and update the items matching the conditions
 	let itemFound = false;
-	t.items.forEach((item) => {
+	for (let item of t.items) {
 		if (evaluateConditions(item, conditions)) {
-			item[property] = newValue; // Assuming the attribute to be updated is 'value'
+			// Check for duplicate id if assigning to "id" property
+			if (property === 'id' && t.items.some((existingItem) => existingItem.id === newValue)) {
+				message = `Item with id "${newValue}" already exists.`;
+				return { queryType, message, type, value };
+			}
+			item[property] = newValue;
 			itemFound = true;
 		}
-	});
+	}
 
 	if (itemFound) {
 		table.set(t);
@@ -228,42 +245,61 @@ function handleExit(queryParts, d) {
 	return { queryType, message, type, value };
 }
 async function handleRename(queryParts, d, t) {
-	let queryType = 'rename';
+	const queryType = 'rename';
 	let message = 'Invalid query.';
 	let type = 'error';
 	let value = '';
 
 	if (!d) {
 		message = 'No database opened.';
-	} else if (queryParts[1]) {
-		const valueMatch = queryParts.join(' ').match(/\(([^)]+)\) to \(([^)]+)\)/);
-		if (!valueMatch) return { queryType, message, type, value };
-
-		const oldProp = valueMatch[1].trim();
-		const base = valueMatch[2].trim().replace(/ /g, '_');
-		if (oldProp === base) {
-			type = 'success';
-			message = 'No changes made.';
-			return { queryType, message, type, value };
-		}
-		let newProp = base;
-		let increment = 1;
-
-		while (t.metadata.columns.includes(newProp)) {
-			newProp = `${base}_${increment}`;
-			increment++;
-		}
-		let index = t.metadata.columns.indexOf(oldProp);
-		if (index === -1) {
-			message = `Column "${oldProp}" does not exist.`;
-			return { queryType, message, type, value };
-		}
-		t.metadata.columns[index] = newProp;
-		table.set(t);
-		type = 'success';
-		message = `Renamed column "${oldProp}" to "${newProp}."`;
+		return { queryType, message, type, value };
 	}
-	return { queryType, type, message, value };
+
+	if (!queryParts[1]) {
+		return { queryType, message, type, value };
+	}
+
+	const valueMatch = queryParts.join(' ').match(/\(([^)]+)\) to \(([^)]+)\)/);
+	if (!valueMatch) {
+		return { queryType, message, type, value };
+	}
+
+	const oldProp = valueMatch[1].trim();
+	const base = valueMatch[2].trim().replace(/ /g, '_');
+
+	if (oldProp === base) {
+		message = 'No changes made.';
+		type = 'success';
+		return { queryType, message, type, value };
+	}
+
+	let newProp = base;
+	let increment = 1;
+
+	while (t.metadata.columns.includes(newProp)) {
+		newProp = `${base}_${increment}`;
+		increment++;
+	}
+
+	const index = t.metadata.columns.indexOf(oldProp);
+
+	if (index === -1) {
+		message = `Column "${oldProp}" does not exist.`;
+		return { queryType, message, type, value };
+	}
+
+	if (oldProp === t.metadata.primaryKey) {
+		message = 'Primary key column cannot be renamed.';
+		return { queryType, message, type, value };
+	}
+
+	t.metadata.columns[index] = newProp;
+	table.set(t);
+
+	message = `Renamed column "${oldProp}" to "${newProp}".`;
+	type = 'success';
+
+	return { queryType, message, type, value };
 }
 async function handleEdit(queryParts, d, t) {
 	let queryType = 'edit';
@@ -289,7 +325,7 @@ async function handleEdit(queryParts, d, t) {
 }
 
 async function handleInsert(queryParts, t) {
-	let queryType = 'insert';
+	const queryType = 'insert';
 	let message = 'Invalid query.';
 	let type = 'error';
 	let value = '';
@@ -312,11 +348,16 @@ async function handleInsert(queryParts, t) {
 					object[t.metadata.columns[i]] = insert[i];
 				}
 
+				if (t.items.some((item) => item[t.metadata.primaryKey] === object[t.metadata.primaryKey])) {
+					message = `Item with id "${object[t.metadata.primaryKey]}" already exists.`;
+					break;
+				}
+				// Insert the new item
+				t.items.push(object);
+				table.set(t);
 				message = 'Successfully inserted object.';
 				type = 'success';
 				value = object;
-				t.items.push(object);
-				table.set(t);
 			}
 			break;
 		case 'column':

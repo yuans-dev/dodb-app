@@ -1,4 +1,5 @@
 <script>
+	import ContentEditable from '../lib/ContentEditable.svelte';
 	import DatabaseDisplay from '../lib/DatabaseDisplay.svelte';
 	import MessageField from '../lib/MessageField.svelte';
 	import QueryField from '../lib/QueryField.svelte';
@@ -20,8 +21,7 @@
 
 	<div class="query-section">
 		<MessageField {responses}></MessageField>
-		<QueryField on:clearRequest={clearResponses} on:response={handleResponse}
-		></QueryField>
+		<QueryField on:clearRequest={clearResponses} on:response={handleResponse}></QueryField>
 	</div>
 </div>
 
@@ -35,12 +35,17 @@
 		height: 100%;
 		padding: 1rem;
 	}
-	.app-proper > * {
+
+	.display-section {
 		display: flex;
 		flex-direction: column;
-		height: 50%;
+		height: 70%;
+		overflow: hidden;
 	}
 	.query-section {
+		flex-direction: column;
+		display: flex;
+		height: 30%;
 		align-items: flex-start;
 		justify-content: flex-end;
 		overflow: hidden;
