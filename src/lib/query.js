@@ -332,6 +332,39 @@ async function handleInsert(queryParts, t) {
 
 	switch (queryParts[0].toLowerCase()) {
 		case 'item':
+			if (queryParts[1].toLowerCase() === 'default') {
+				// Default item
+				if (t) {
+					const object = {};
+					let maxId = 0;
+
+					// Find the largest existing id
+					t.items.forEach((item) => {
+						const id = parseInt(item[t.metadata.primaryKey], 10);
+						if (id > maxId) maxId = id;
+					});
+
+					// Set the new id as the largest id + 1
+					object[t.metadata.primaryKey] = (maxId + 1).toString();
+
+					// Set other properties to "-"
+					t.metadata.columns.forEach((col) => {
+						if (col !== t.metadata.primaryKey) {
+							object[col] = '-';
+						}
+					});
+
+					// Insert the new default item
+					t.items.push(object);
+					table.set(t);
+					message = 'Successfully inserted object.';
+					type = 'success';
+					value = object;
+				}
+				break;
+			}
+
+			// Concatenate the rest of the query parts
 			for (let i = 2; i < queryParts.length; i++) {
 				queryParts[1] += queryParts[i];
 			}
@@ -352,6 +385,7 @@ async function handleInsert(queryParts, t) {
 					message = `Item with id "${object[t.metadata.primaryKey]}" already exists.`;
 					break;
 				}
+
 				// Insert the new item
 				t.items.push(object);
 				table.set(t);
