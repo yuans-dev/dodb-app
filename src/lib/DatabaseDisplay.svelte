@@ -89,6 +89,7 @@
 		gap: 1rem;
 		font-family: monospace;
 		height: 100%;
+
 		overflow: auto;
 	}
 	.columns {
@@ -107,6 +108,9 @@
 		display: table;
 		width: fit-content;
 		flex-direction: column;
+	}
+	.table > * {
+		white-space: nowrap;
 	}
 	.item {
 		display: table-row;
