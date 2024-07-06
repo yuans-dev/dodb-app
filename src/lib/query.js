@@ -42,6 +42,7 @@ export async function handleQuery(query) {
 	table.subscribe((value) => {
 		t = value;
 	});
+	console.log(`query: ${query}`);
 	query = query.split(' ');
 	let queryType = 'null';
 	let message = 'Invalid query.';
@@ -138,8 +139,7 @@ async function handleAssign(queryParts, t) {
 
 	const newValue = valueMatch[1].trim();
 	const property = valueMatch[2].trim();
-	const conditionStr = queryParts.slice(6).join(' ');
-
+	const conditionStr = queryParts.join(' ').substring(valueMatch[0].length).trim();
 	// Parse conditions from the query
 	const conditions = parseConditions(conditionStr);
 
@@ -293,6 +293,11 @@ async function handleRename(queryParts, d, t) {
 		return { queryType, message, type, value };
 	}
 
+	for(let item of t.items){
+		if(item[oldProp] != null){
+			item[newProp] = item[oldProp];
+		}
+	}
 	t.metadata.columns[index] = newProp;
 	table.set(t);
 

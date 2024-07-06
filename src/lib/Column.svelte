@@ -16,7 +16,6 @@
 	function requestDelete() {
 		dispatch('requestDelete', { value });
 	}
-	console.log(value !== $table.metadata.primaryKey);
 </script>
 
 <div class="column">
